@@ -1,18 +1,9 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Hosting;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Threading;
-using System.IO;
 using System.Reflection;
-using System.Diagnostics;
-using System.Net.Http;
-using System.Net;
 
 namespace ImgProc
 {
@@ -68,8 +59,11 @@ namespace ImgProc
 
       #region RegisterServiceProviders
       var appSettingsSection = Configuration.GetSection("AppSettings");
-      services.Configure<AppSettings>(appSettingsSection);
+      services.Configure<AppSettings>(Configuration);
 
+      services.AddSingleton(p => p.GetRequiredService<IConfiguration>().GetSection("ImgBB")
+        .Get<ImgBBConfig>() ?? new ImgBBConfig("", "")
+      );
       var dbConn = Configuration.GetConnectionString("DefaultDB");
       services.AddMemoryCache();
       services.AddSingleton(Configuration);
@@ -77,6 +71,7 @@ namespace ImgProc
       var client = Configuration.CreateMongoClient("MongoDBConnection");
       services.AddScoped(o => new MongoDbContext(client));
       services.AddScoped<NormalizeImageService>();
+      services.AddHttpClient();
 
       #endregion
     }
