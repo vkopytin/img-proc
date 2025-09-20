@@ -56,7 +56,7 @@ namespace ImgProc
 
     private static void ConfigureServices(IServiceCollection services)
     {
-      var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+      var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
 
       Configuration = new ConfigurationBuilder()
           //.SetBasePath(Assembly.GetEntryAssembly().Location)

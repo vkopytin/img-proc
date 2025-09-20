@@ -1,84 +1,31 @@
-using System;
-using System.Text.Json.Serialization;
-using ImgProc;
+using System.ComponentModel.DataAnnotations.Schema;
 
-namespace ImgProc.Dto
+namespace ImgProc.Db;
+
+[Table("ArticleBlock")]
+public class ArticleBlockRecord : BaseEntity<int>
 {
-  using System.ComponentModel.DataAnnotations;
-  using Converters;
-  using Db;
+  public string? Title { get; set; }
+  public string? Description { get; set; }
 
-  public class ArticleBlockModel
-  {
-    [JsonPropertyName("id")]
-    public int Id { get; set; }
+  public string? Origin { get; set; }
 
-    [JsonPropertyName("articleId")]
-    public Guid? ArticleId { get; set; }
+  public DateTime UpdatedAt { get; set; }
 
-    [JsonPropertyName("title")]
-    public string Title { get; set; }
+  #region Navigation Properties
+  public Guid? ArticleId { get; set; }
 
-    [JsonPropertyName("description")]
-    public string Description { get; set; }
-    //[DisplayFormat(DataFormatString = "{0:dd MMM yyyy}")]
-    [JsonPropertyName("createdAt")]
-    [JsonConverter(typeof(UnixDateTimeConverter))]
-    public DateTime CreatedAt { get; set; }
-    [JsonPropertyName("updatedAt")]
-    [JsonConverter(typeof(UnixDateTimeConverter))]
-    public DateTime UpdatedAt { get; set; }
+  #endregion
 
-    #region Media Info
-    [JsonPropertyName("mediaId")]
-    public int? MediaId { get; set; }
-    //[JsonPropertyName("media")]
-    public ArticleBlockModel Media { get; set; }
-    [JsonPropertyName("width")]
-    public int Width { get; set; }
-    [JsonPropertyName("height")]
-    public int Height { get; set; }
-    [JsonPropertyName("sourceUrl")]
-    public string SourceUrl { get; set; }
-    [JsonPropertyName("origin")]
-    public string Origin { get; set; }
-    [JsonPropertyName("fileName")]
-    public string FileName { get; set; }
-    [JsonPropertyName("image")]
-    public string Image
-    {
-      get
-      {
-        if (string.IsNullOrEmpty(this.Origin))
-        {
-          return null;
-        }
-        return $"https://vkopytin.blob.core.windows.net/normalized/{this.Id}";
-      }
-    }
-    #endregion
+  #region Media Info
+  public int? MediaId { get; set; }
+  [ForeignKey("MediaId")]
+  public ArticleBlockRecord? Media { get; set; }
+  public int? Width { get; set; }
+  public int? Height { get; set; }
+  public string? SourceUrl { get; set; }
+  public string? FileName { get; set; }
+  #endregion
 
-    public string Rank { get; set; }
-
-    public ArticleBlockRecord ToDbObject()
-    {
-      return new ArticleBlockRecord
-      {
-        Id = this.Id,
-        Title = this.Title,
-        Description = this.Description,
-        CreatedAt = this.CreatedAt,
-        UpdatedAt = this.UpdatedAt,
-        ArticleId = this.ArticleId ?? Guid.Empty,
-        MediaId = this.MediaId ?? 0,
-        Media = this.Media?.ToDbObject(),
-        Width = this.Width,
-        Height = this.Height,
-        SourceUrl = this.SourceUrl,
-        Origin = this.Origin,
-        Rank = this.Rank,
-        FileName = this.FileName,
-      };
-    }
-  }
+  public string? Rank { get; set; }
 }

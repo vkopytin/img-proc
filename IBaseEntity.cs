@@ -1,7 +1,6 @@
-namespace Repository
+namespace ImgProc.Db;
+
+public interface IBaseEntity
 {
-    public interface IBaseEntity
-    {
-        object Id { get; set; }
-    }
+  object Id { get; set; }
 }
