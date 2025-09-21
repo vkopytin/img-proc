@@ -21,6 +21,7 @@ public class ArticleBlockRecord : BaseEntity<int>
   public int? MediaId { get; set; }
   [ForeignKey("MediaId")]
   public ArticleBlockRecord? Media { get; set; }
+  public string? MediaError { get; set; }
   public int? Width { get; set; }
   public int? Height { get; set; }
   public string? SourceUrl { get; set; }

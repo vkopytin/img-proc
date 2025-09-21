@@ -35,92 +35,132 @@ public class NormalizeImageService
     = from b in context.ArticleBlocks.AsEnumerable()
       orderby b.CreatedAt descending
       select b;
-    var blocks = query.Where(b => b.Origin is null && b.SourceUrl is not null).Take(10).ToArray();
+    var blocks = query.Where(b => b.SourceUrl is null && b.Origin is not null).Take(10).ToArray();
 
     foreach (var item in blocks)
     {
-      var uri = new Uri(item.SourceUrl!);
-      var fileName = Path.GetFileName(uri.LocalPath);
-      logger.LogInformation($"Processing image: {fileName}");
-      using var result = await httpClient.GetAsync(item.SourceUrl);
-      if (result.IsSuccessStatusCode)
+      var isValid = Uri.IsWellFormedUriString(item.Origin, UriKind.Absolute);
+      if (isValid)
       {
-        UInt16 orientationExif = 0;
-        var imageData = await result.Content.ReadAsByteArrayAsync();
-        try
+        var uri = new Uri(item.Origin!);
+        var fileName = Path.GetFileName(uri.LocalPath);
+        logger.LogInformation($"Processing image: {fileName}");
+
+        var (result, error) = await this.NormalizeImage(uri);
+        if (result is null)
         {
-          var er = new ExifLib.ExifReader(new MemoryStream(imageData));
-          er.GetTagValue(ExifLib.ExifTags.Orientation, out orientationExif);
+          logger.LogError(error);
+          item.MediaError = error;
         }
-        catch (ExifLib.ExifLibException ex)
+        else
         {
+          item.SourceUrl = result;
+          item.MediaError = null;
         }
-
-        var image = Bitmap.FromStream(new MemoryStream(imageData));
-        if (orientationExif == 8)
-        {
-          image.RotateFlip(RotateFlipType.Rotate270FlipNone);
-        }
-        else if (orientationExif == 3)
-        {
-          image.RotateFlip(RotateFlipType.Rotate180FlipNone);
-        }
-        else if (orientationExif == 6)
-        {
-          image.RotateFlip(RotateFlipType.Rotate90FlipNone);
-        }
-        int width = appSettings.NormalizedWidth;
-        var ratio = (float)image.Width / image.Height;
-
-        var destRect = new Rectangle(0, 0, width, (int)(width / ratio));
-        var destImage = new Bitmap(width, (int)(width / ratio));
-
-        destImage.SetResolution(
-            image.HorizontalResolution == 0 ? 300f : image.HorizontalResolution,
-            image.VerticalResolution == 0 ? 300f : image.VerticalResolution
-        );
-
-        using (var graphics = Graphics.FromImage(destImage))
-        {
-          graphics.CompositingMode = CompositingMode.SourceOver;
-          graphics.CompositingQuality = CompositingQuality.HighQuality;
-          graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-          graphics.SmoothingMode = SmoothingMode.HighQuality;
-          graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-
-          using (var wrapMode = new ImageAttributes())
-          {
-            wrapMode.SetWrapMode(WrapMode.TileFlipXY);
-            graphics.DrawImage(image, destRect, 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, wrapMode);
-          }
-        }
-
-        using var m = new MemoryStream();
-        destImage.Save(m, ImageFormat.Png);
-        m.Position = 0;
-
-        using var dest = new MagickImage(m);
-        dest.SetCompression(CompressionMethod.WebP);
-        byte[] res = dest.ToByteArray(MagickFormat.WebP);
-
-        using (var m2 = new MemoryStream(res))
-        {
-          var (imgBbResult, err) = await this.CreateImageBB(m2, "image/webp", fileName);
-
-          if (imgBbResult is null)
-          {
-            logger.LogError(err);
-            continue;
-          }
-
-          item.Origin = item.SourceUrl;
-          item.SourceUrl = imgBbResult.Data.Url;
-
-          context.Update(item);
-        }
-
-        await context.SaveChangesAsync();
       }
+      else
+      {
+        item.MediaError = "invalid-origin";
+      }
+
+      context.Update(item);
+    }
+
+    await context.SaveChangesAsync();
+  }
+
+  private async Task<(string? result, string? error)> NormalizeImage(Uri url)
+  {
+    var (imageData, error) = await this.DownloadImage(url);
+    if (imageData is null)
+    {
+      return (null, error);
+    }
+
+    var fileName = Path.GetFileName(url.LocalPath);
+    UInt16 orientationExif = 0;
+    try
+    {
+      var er = new ExifLib.ExifReader(new MemoryStream(imageData));
+      er.GetTagValue(ExifLib.ExifTags.Orientation, out orientationExif);
+    }
+    catch (ExifLib.ExifLibException ex)
+    {
+    }
+
+    var image = Image.FromStream(new MemoryStream(imageData));
+    if (orientationExif == 8)
+    {
+      image.RotateFlip(RotateFlipType.Rotate270FlipNone);
+    }
+    else if (orientationExif == 3)
+    {
+      image.RotateFlip(RotateFlipType.Rotate180FlipNone);
+    }
+    else if (orientationExif == 6)
+    {
+      image.RotateFlip(RotateFlipType.Rotate90FlipNone);
+    }
+    int width = appSettings.NormalizedWidth;
+    var ratio = (float)image.Width / image.Height;
+
+    var destRect = new Rectangle(0, 0, width, (int)(width / ratio));
+    var destImage = new Bitmap(width, (int)(width / ratio));
+
+    destImage.SetResolution(
+        image.HorizontalResolution == 0 ? 300f : image.HorizontalResolution,
+        image.VerticalResolution == 0 ? 300f : image.VerticalResolution
+    );
+
+    using var graphics = Graphics.FromImage(destImage);
+    graphics.CompositingMode = CompositingMode.SourceOver;
+    graphics.CompositingQuality = CompositingQuality.HighQuality;
+    graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+    graphics.SmoothingMode = SmoothingMode.HighQuality;
+    graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+    using var wrapMode = new ImageAttributes();
+
+    wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+    graphics.DrawImage(image, destRect, 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, wrapMode);
+
+    using var m = new MemoryStream();
+    destImage.Save(m, ImageFormat.Png);
+    m.Position = 0;
+
+    using var dest = new MagickImage(m);
+    dest.SetCompression(CompressionMethod.WebP);
+    var res = dest.ToByteArray(MagickFormat.WebP);
+
+    using var m2 = new MemoryStream(res);
+    var (imgBbResult, err) = await this.CreateImageBB(m2, "image/webp", fileName);
+
+    if (imgBbResult is null)
+    {
+      return (null, err);
+    }
+
+    return (imgBbResult.Data.Url, null);
+  }
+
+  private async Task<(byte[]?, string? error)> DownloadImage(Uri url)
+  {
+    using var result = await httpClient.GetAsync(url);
+    if (result.IsSuccessStatusCode)
+    {
+      var imageData = await result.Content.ReadAsByteArrayAsync();
+
+      return (imageData, null);
+    }
+
+    try
+    {
+      var customContent = await result.Content.ReadAsStringAsync();
+      return (null, customContent);
+    }
+    catch (Exception ex)
+    {
+      return (null, ex.InnerException is null ? ex.Message : ex.InnerException.Message);
     }
   }
 
