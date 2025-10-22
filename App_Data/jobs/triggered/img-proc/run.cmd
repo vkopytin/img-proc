@@ -1,1 +1,1 @@
-dotnet /home/site/wwwroot/bin/img-proc.dll
+/home/site/wwwroot/img-proc.exe
