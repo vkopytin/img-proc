@@ -6,6 +6,7 @@
     <RootNamespace>img_proc</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,7 +20,6 @@
     <PackageReference Include="libwebp.v140" Version="0.5.0.2" />
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.9.0" />
     <PackageReference Include="Magick.NET.Core" Version="14.9.0" />
-    <PackageReference Include="MongoDB.EntityFrameworkCore" Version="8.0.1" />
   </ItemGroup>
 
   <ItemGroup>
