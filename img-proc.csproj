@@ -9,16 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.ServiceBus" Version="4.2.1" />
-    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.1.0" />
-    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="4.0.5" />
-    <PackageReference Include="Microsoft.Azure.WebJobs.Logging.ApplicationInsights" Version="3.0.33" />
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.ServiceBus" Version="5.17.0" />
+    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.6.0" />
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="5.3.6" />
+    <PackageReference Include="Microsoft.Azure.WebJobs.Logging.ApplicationInsights" Version="3.0.41" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="6.0.5" />
-    <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.5">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
+    <PackageReference Include="System.Drawing.Common" Version="9.0.10" />
+    <PackageReference Include="MongoDB.EntityFrameworkCore" Version="8.0.1" />
     <PackageReference Include="libwebp.v140" Version="0.5.0.2" />
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.9.0" />
     <PackageReference Include="Magick.NET.Core" Version="14.9.0" />
