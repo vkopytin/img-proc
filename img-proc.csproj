@@ -20,11 +20,9 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="libwebp.v140" Version="0.5.0.2" />
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="11.1.2" />
-    <PackageReference Include="Magick.NET.Core" Version="11.1.2" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.9.0" />
+    <PackageReference Include="Magick.NET.Core" Version="14.9.0" />
     <PackageReference Include="MongoDB.EntityFrameworkCore" Version="8.0.1" />
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="11.1.2" />
-    <PackageReference Include="Magick.NET.Core" Version="11.1.2" />
   </ItemGroup>
 
   <ItemGroup>
