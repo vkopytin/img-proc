@@ -27,9 +27,12 @@ jobs:
         run: dotnet build --configuration Release
 
       - name: dotnet publish
+        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+
+      - name: Prepare for run time
         run: |
-          dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
           mv "${{env.DOTNET_ROOT}}/myapp/bin/*" "${{env.DOTNET_ROOT}}/myapp/."
+          cp "${{env.DOTNET_ROOT}}/myapp/bin/Release/net8.0/Microsoft.Azure.WebJobs.Host.dll" "${{env.DOTNET_ROOT}}/myapp/."
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
