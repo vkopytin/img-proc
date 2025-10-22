@@ -28,8 +28,8 @@ jobs:
 
       - name: dotnet publish
         run: |
-          dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
-          mv "${{env.DOTNET_ROOT}}/myapp/bin/*" "${{env.DOTNET_ROOT}}/myapp/. -r"
+          - dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+          - mv "${{env.DOTNET_ROOT}}/myapp/bin/*" "${{env.DOTNET_ROOT}}/myapp/. -r"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
