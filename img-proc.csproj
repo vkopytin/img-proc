@@ -38,4 +38,12 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <DistFiles Include="$(SpaRoot)App_Data\jobs\triggered\img-proc\run.cmd" />
+    <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)" DestinationFolder="App_Data\">
+      <RelativePath>App_Data\jobs\triggered\img-proc\run.cmd</RelativePath>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </ResolvedFileToPublish>
+  </ItemGroup>
+
 </Project>
