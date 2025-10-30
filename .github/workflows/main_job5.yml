@@ -27,7 +27,7 @@ jobs:
         run: dotnet build --configuration Debug
 
       - name: dotnet publish
-        run: dotnet publish -c Debug -o "${{env.DOTNET_ROOT}}/myapp"
+        run: dotnet publish -c Debug --arch x86 -o "${{env.DOTNET_ROOT}}/myapp"
 
       - name: Prepare for run time
         run: |
