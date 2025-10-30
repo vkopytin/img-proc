@@ -54,6 +54,7 @@ public class NormalizeImageService
         }
         else
         {
+          item.Description = $"<img src=\"{result}\" alt=\"{fileName}\" />";
           item.SourceUrl = result;
           item.MediaError = null;
         }
