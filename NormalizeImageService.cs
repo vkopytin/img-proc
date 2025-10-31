@@ -36,7 +36,6 @@ public class NormalizeMediaService
       orderby b.CreatedAt descending
       select b;
     var blocks = query.Where(b => b.SourceUrl is null && b.Origin is not null).Take(10).ToArray();
-    blocks = [context.ArticleBlocks.Find(85590)];
 
     foreach (var item in blocks)
     {
