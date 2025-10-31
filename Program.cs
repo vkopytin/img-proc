@@ -40,8 +40,8 @@ namespace ImgProc
       var ct = tokenSource.Token;
       using var host = builder.Build();
       using var scope = host.Services.CreateScope();
-      var normalizeImage = scope.ServiceProvider.GetRequiredService<NormalizeImageService>();
-      await normalizeImage.Process();
+      var normalizedMedia = scope.ServiceProvider.GetRequiredService<NormalizeMediaService>();
+      await normalizedMedia.Process();
       tokenSource.Dispose();
     }
 
@@ -70,7 +70,7 @@ namespace ImgProc
 
       var client = Configuration.CreateMongoClient("MongoDBConnection");
       services.AddScoped(o => new MongoDbContext(client));
-      services.AddScoped<NormalizeImageService>();
+      services.AddScoped<NormalizeMediaService>();
       services.AddHttpClient();
 
       #endregion

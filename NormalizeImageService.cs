@@ -9,18 +9,18 @@ using ImgProc.ImgBB;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-public class NormalizeImageService
+public class NormalizeMediaService
 {
   HttpClient httpClient;
   MongoDbContext context;
   AppSettings appSettings;
-  ILogger<NormalizeImageService> logger;
+  ILogger<NormalizeMediaService> logger;
 
-  public NormalizeImageService(
+  public NormalizeMediaService(
     HttpClient httpClient,
     MongoDbContext dbContext,
     IOptions<AppSettings> appSettings,
-    ILogger<NormalizeImageService> logger
+    ILogger<NormalizeMediaService> logger
   )
   {
     this.httpClient = httpClient;
@@ -36,49 +36,70 @@ public class NormalizeImageService
       orderby b.CreatedAt descending
       select b;
     var blocks = query.Where(b => b.SourceUrl is null && b.Origin is not null).Take(10).ToArray();
+    blocks = [context.ArticleBlocks.Find(85590)];
 
     foreach (var item in blocks)
     {
       var isValid = Uri.IsWellFormedUriString(item.Origin, UriKind.Absolute);
-      if (isValid)
+      if (!isValid)
       {
-        var uri = new Uri(item.Origin!);
-        var fileName = Path.GetFileName(uri.LocalPath);
+        item.MediaError = "invalid-origin";
+        logger.LogError($"Invalid origin URL: {item.Origin}");
+        context.Update(item);
+
+        continue;
+      }
+
+      var uri = new Uri(item.Origin!);
+      var fileName = Path.GetFileName(uri.LocalPath);
+      logger.LogInformation($"Processing file: {fileName}");
+
+      using var result = await httpClient.GetAsync(uri);
+      var contentType = await ReadContentType(result, 6);
+      logger.LogInformation($"Content type: {contentType}");
+      if (contentType.StartsWith("image/"))
+      {
         logger.LogInformation($"Processing image: {fileName}");
 
-        var (result, error) = await this.NormalizeImage(uri);
-        if (result is null)
+        var (imageData, error) = await this.ReadImage(result);
+        if (imageData is null)
         {
           logger.LogError(error);
           item.MediaError = error;
-        }
-        else
-        {
-          item.Description = $"<img src=\"{result}\" alt=\"{fileName}\" />";
-          item.SourceUrl = result;
-          item.MediaError = null;
-        }
-      }
-      else
-      {
-        item.MediaError = "invalid-origin";
-      }
+          context.Update(item);
 
-      context.Update(item);
+          continue;
+        }
+
+        var (normalizeResult, normalizeError) = await this.NormalizeImage(imageData, fileName);
+        if (normalizeResult is null)
+        {
+          logger.LogError(normalizeError);
+          item.MediaError = normalizeError;
+          context.Update(item);
+
+          continue;
+        }
+
+        item.Description = $"<img src=\"{normalizeResult}\" width=\"{item.Width}\" height=\"{item.Height}\" alt=\"{fileName}\" />";
+        item.SourceUrl = normalizeResult;
+        item.MediaError = null;
+
+        context.Update(item);
+      }
+      else // toDO: Implement more normalizations logic here.
+      {
+        logger.LogError($"Invalid content type: {contentType}");
+        item.MediaError = "invalid-content-type";
+        context.Update(item);
+      }
     }
 
     await context.SaveChangesAsync();
   }
 
-  private async Task<(string? result, string? error)> NormalizeImage(Uri url)
+  private async Task<(string? result, string? error)> NormalizeImage(byte[] imageData, string fileName)
   {
-    var (imageData, error) = await this.DownloadImage(url);
-    if (imageData is null)
-    {
-      return (null, error);
-    }
-
-    var fileName = Path.GetFileName(url.LocalPath);
     UInt16 orientationExif = 0;
     try
     {
@@ -151,9 +172,8 @@ public class NormalizeImageService
     }
   }
 
-  private async Task<(byte[]?, string? error)> DownloadImage(Uri url)
+  private async Task<(byte[]?, string? error)> ReadImage(HttpResponseMessage result)
   {
-    using var result = await httpClient.GetAsync(url);
     if (result.IsSuccessStatusCode)
     {
       var imageData = await result.Content.ReadAsByteArrayAsync();
@@ -195,5 +215,35 @@ public class NormalizeImageService
     var res = await httpResult.Content.ReadAsStringAsync();
 
     return (null, res);
+  }
+
+  static async Task<string> ReadContentType(HttpResponseMessage result, int length)
+  {
+    if (result.Content.Headers.ContentType?.MediaType is not null)
+    {
+      return result.Content.Headers.ContentType.MediaType;
+    }
+    var stream = await result.Content.ReadAsStreamAsync();
+    using StreamReader reader = new StreamReader(stream);
+
+    var magicLength = 6;
+    var magicCode = new byte[magicLength];
+    await stream.ReadAsync(magicCode, 0, magicLength);
+    stream.Position = 0;
+
+    var magicString = System.Text.Encoding.UTF8.GetString(magicCode);
+
+    switch (magicString)
+    {
+      case "\x89PNG\r\n":
+        return "image/png";
+      case "\xFF\xD8\xFF":
+        return "image/jpeg";
+      case "GIF87a":
+      case "GIF89a":
+        return "image/gif";
+      default:
+        return "application/octet-stream";
+    }
   }
 }
