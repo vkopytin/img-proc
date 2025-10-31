@@ -80,7 +80,9 @@ public class NormalizeMediaService
           continue;
         }
 
-        item.Description = $"<img src=\"{normalizeResult}\" width=\"{item.Width}\" height=\"{item.Height}\" alt=\"{fileName}\" />";
+        int width = appSettings.NormalizedWidth;
+        var ratio = (float)item.Width / item.Height;
+        item.Description = $"<img src=\"{normalizeResult}\" width=\"{appSettings.NormalizedWidth}\" height=\"{(int)(appSettings.NormalizedWidth / ratio)}\" alt=\"{fileName}\" />";
         item.SourceUrl = normalizeResult;
         item.MediaError = null;
 
