@@ -4,6 +4,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Hosting;
 using System.Reflection;
+using MongoDB.Bson;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ImgProc
 {
@@ -13,32 +19,30 @@ namespace ImgProc
 
     static async Task Main(string[] args)
     {
-      //Program.Train().Wait();
-      var builder = new HostBuilder();
-      //builder.UseEnvironment("Development");
+      var builder = WebApplication.CreateBuilder(args);
 
-      builder.ConfigureServices((context, s) =>
-      {
-        ConfigureServices(s);
-        s.BuildServiceProvider();
-      });
+      ConfigureServices(builder.Services);
 
-      builder.ConfigureLogging(logging =>
+      builder.Logging.AddConsole();
+      string appInsightsKey = Configuration["APPINSIGHTS_INSTRUMENTATIONKEY"];
+      if (!string.IsNullOrEmpty(appInsightsKey))
       {
-        logging.AddConsole();
-        string appInsightsKey = Configuration["APPINSIGHTS_INSTRUMENTATIONKEY"];
-        if (!string.IsNullOrEmpty(appInsightsKey))
-        {
-          // This uses the options callback to explicitly set the instrumentation key.
-          logging.AddApplicationInsights(appInsightsKey)
-                    .SetMinimumLevel(LogLevel.Information)
-                    .AddApplicationInsightsWebJobs(o => { o.InstrumentationKey = appInsightsKey; });
-        }
-      });
+        // This uses the options callback to explicitly set the instrumentation key.
+        builder.Logging.AddApplicationInsights(appInsightsKey)
+                  .SetMinimumLevel(LogLevel.Information)
+                  .AddApplicationInsightsWebJobs(o => { o.InstrumentationKey = appInsightsKey; });
+      }
 
       var tokenSource = new CancellationTokenSource();
       var ct = tokenSource.Token;
       using var host = builder.Build();
+      if (args.Length == 0 || args[0] != "process")
+      {
+        host.UsePathBase("/api");
+        host.MapControllers();
+        host.MapHealthChecks("/health");
+        await host.RunAsync(ct);
+      }
       using var scope = host.Services.CreateScope();
       var normalizedMedia = scope.ServiceProvider.GetRequiredService<NormalizeMediaService>();
       await normalizedMedia.Process();
@@ -50,12 +54,17 @@ namespace ImgProc
       var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
 
       Configuration = new ConfigurationBuilder()
-          //.SetBasePath(Assembly.GetEntryAssembly().Location)
-          .SetBasePath(GetBasePath())
-          .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-          .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
-          .AddEnvironmentVariables() //this doesnt do anything useful notice im setting some env variables explicitly.
-          .Build();  //build it so you can use those config variables down below.
+        //.SetBasePath(Assembly.GetEntryAssembly().Location)
+        .SetBasePath(GetBasePath())
+        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+        .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
+        .AddEnvironmentVariables() //this doesnt do anything useful notice im setting some env variables explicitly.
+        .Build();  //build it so you can use those config variables down below.
+
+      services
+        .AddControllers()
+        .AddApplicationPart(Assembly.GetEntryAssembly());
+      services.AddHealthChecks();
 
       #region RegisterServiceProviders
       var appSettingsSection = Configuration.GetSection("AppSettings");

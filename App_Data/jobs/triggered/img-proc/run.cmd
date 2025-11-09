@@ -1,1 +1,1 @@
-/home/site/wwwroot/img-proc.exe
+/home/site/wwwroot/img-proc.exe process
