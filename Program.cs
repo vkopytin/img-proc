@@ -40,6 +40,7 @@ namespace ImgProc
       {
         host.UsePathBase("/api");
         host.MapControllers();
+        host.UseHttpsRedirection();
         host.MapHealthChecks("/health");
         await host.RunAsync(ct);
       }
