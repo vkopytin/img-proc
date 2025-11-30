@@ -88,10 +88,20 @@ public class NormalizeMediaService
 
         context.Update(item);
       }
+      else if (contentType.StartsWith("application/pdf"))
+      {
+        logger.LogInformation($"Processing PDF file: {fileName}");
+        item.SourceUrl = item.Origin;
+        item.Description = $"<iframe src=\"{item.Origin}\"></iframe>";
+        item.MediaError = "";
+
+        context.Update(item);
+      }
       else // toDO: Implement more normalizations logic here.
       {
         logger.LogError($"Invalid content type: {contentType}");
         item.MediaError = "invalid-content-type";
+
         context.Update(item);
       }
     }
