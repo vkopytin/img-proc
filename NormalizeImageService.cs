@@ -92,7 +92,7 @@ public class NormalizeMediaService
       {
         logger.LogInformation($"Processing PDF file: {fileName}");
         item.SourceUrl = item.Origin;
-        item.Description = $"<iframe src=\"{item.Origin}\"></iframe>";
+        item.Description = $"<iframe src=\"{item.Origin}\" width=\"100%\" height=\"500\"></iframe>";
         item.MediaError = "";
 
         context.Update(item);
